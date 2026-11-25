@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baby Hamper Customizer</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #fff4f0; margin: 0; padding: 15px; color: #444; }
+  h1 { text-align: center; color: #d6657c; margin-bottom: 5px; }
+  .sub { text-align: center; margin-bottom: 20px; }
+  .main { display: flex; gap: 20px; max-width: 1000px; margin: auto; }
+  .left { flex: 1.3; }  .right { flex: 1; }
+  .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 10px; box-shadow: 0 1px 6px #ccc; }
+  .card h2 { font-size: 18px; color: #b5526a; margin-top: 0; }
+  .options { display: flex; flex-wrap: wrap; gap: 10px; }
+  .opt { width: 130px; border: 2px solid #eee; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; font-size: 14px; }
+  .opt:hover { border-color: #f2a9b8; }
+  .active { border-color: #d6657c; background: #ffeef1; }
+  .emoji { font-size: 30px; }
+  .tip { margin-top: 10px; padding: 8px; background: #eef8f1; border-radius: 6px; font-size: 14px; }
+  .preview { text-align: center; background: #fdeee4; padding: 15px; border-radius: 10px; }
+  #bigIcon { font-size: 60px; }
+  #contents { font-size: 28px; min-height: 40px; }
+  #ribbonBar { height: 10px; width: 70%; margin: 8px auto; border-radius: 5px; }
+  .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+  .total { border-top: 2px dashed #ddd; margin-top: 6px; padding-top: 8px; font-weight: bold; font-size: 18px; color: #d6657c; }
+  #to, #from, textarea { width: 100%; box-sizing: border-box; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 6px; }
+  #giftCard { border: 4px solid #f4a6b8; border-radius: 10px; padding: 12px; text-align: center; font-family: Georgia, serif; background: #fffdf7; }
+  button { width: 100%; padding: 10px; margin-top: 10px; border: none; border-radius: 8px; background: #d6657c; color: white; font-size: 16px; cursor: pointer; }
+  footer { text-align: center; margin-top: 10px; font-size: 13px; color: #888; }
+  @media (max-width: 800px) { .main { flex-direction: column; } }
+</style>
+</head>
+<body>
+<h1>🍼 Baby Hamper Customizer</h1>
+<p class="sub">Make a gift hamper for a newborn baby</p>
+<div class="main">
+<div class="left">
+  <div class="card"><h2>1. Choose a Container</h2><div class="options" id="boxes"></div></div>
+  <div class="card"><h2>2. Baby Essentials</h2><div class="options" id="items"></div>
+    <div class="tip">Each item can be added only once, so no duplicate gifts!</div></div>
+  <div class="card"><h2>3. Age / Size Guide</h2><div class="options" id="ages"></div>
+    <div class="tip" id="sizeTip"></div></div>
+  <div class="card"><h2>4. Wrapping and Ribbon</h2>
+    <input type="checkbox" id="wrap" checked onchange="updateAll()"> Gift wrapping (FREE)
+    <p>Choose satin ribbon colour:</p><div class="options" id="ribbons"></div></div>
+</div>
+<div class="right">
+  <div class="card"><h2>Your Hamper</h2>
+    <div class="preview"><div id="bigIcon"></div><div id="contents"></div>
+      <div id="ribbonBar"></div><small id="wrapNote"></small></div></div>
+  <div class="card"><h2>Price</h2><div id="bill"></div></div>
+  <div class="card"><h2>Gift Card</h2>
+    <input id="to" placeholder="To (parents name)" oninput="updateCard()">
+    <input id="from" placeholder="From" oninput="updateCard()">
+    <textarea id="msg" rows="3" placeholder="Write your message..." oninput="updateCard()"></textarea>
+    <div id="giftCard"><h3 id="cardTo"></h3><p id="cardMsg"></p><i id="cardFrom"></i></div>
+    <button onclick="copySummary()">Copy Hamper Summary</button></div>
+</div>
+</div>
+<footer>Made by [Your Name]</footer>
+<script>
+
+var boxes = [
+  { name: "Woven Seagrass Basket", price: 499, icon: "🧺" },
+  { name: "Pastel Wooden Crate", price: 599, icon: "📦" },
+  { name: "Reusable Keepsake Box", price: 399, icon: "🎁" }
+];
+var items = [
+  { name: "Organic Bamboo Onesies", price: 699, icon: "👕", sized: true },
+  { name: "Muslin Swaddles", price: 549, icon: "🧣", sized: true },
+  { name: "Silicon Teethers", price: 299, icon: "🦷", sized: false },
+  { name: "Baby Balm", price: 349, icon: "🧴", sized: false },
+  { name: "Rattle Toys", price: 249, icon: "🧸", sized: false }
+];
+var ages = [
+  { name: "Preemie", weight: "up to 2.5 kg (5.5 lb)", tip: "Born before 37 weeks. Very tiny and soft fit." },
+  { name: "0-3 Months", weight: "2.5 - 5.5 kg (5.5 - 12 lb)", tip: "Most common newborn size." },
+  { name: "3-6 Months", weight: "5.5 - 7.5 kg (12 - 16.5 lb)", tip: "Baby starts rolling, little room to grow." },
+  { name: "6-12 Months", weight: "7.5 - 10 kg (16.5 - 22 lb)", tip: "Crawling stage, choose stretchy clothes." }
+];
+var ribbons = [
+  { name: "Blush Pink", color: "#f4a6b8" }, { name: "Baby Blue", color: "#9fd0f0" },
+  { name: "Mint Green", color: "#a8e0c5" }, { name: "Ivory", color: "#f1e8d0" }
+];
+
+
+var boxIndex = 0, ageIndex = 1, ribbonIndex = 0;
+var selectedItems = [];   
+
+function get(id) { return document.getElementById(id); }
+
+function showBoxes() {
+  var html = "";
+  for (var i = 0; i < boxes.length; i++) {
+    var cls = (i == boxIndex) ? "opt active" : "opt";
+    html += '<div class="' + cls + '" onclick="pickBox(' + i + ')"><div class="emoji">' + boxes[i].icon + '</div>' + boxes[i].name + '<br><small>₹' + boxes[i].price + '</small></div>';
+  }
+  get("boxes").innerHTML = html;
+}
+function showItems() {
+  var html = "";
+  for (var i = 0; i < items.length; i++) {
+    var cls = (selectedItems.indexOf(i) != -1) ? "opt active" : "opt";
+    html += '<div class="' + cls + '" onclick="pickItem(' + i + ')"><div class="emoji">' + items[i].icon + '</div>' + items[i].name + '<br><small>₹' + items[i].price + '</small></div>';
+  }
+  get("items").innerHTML = html;
+}
+function showAges() {
+  var html = "";
+  for (var i = 0; i < ages.length; i++) {
+    var cls = (i == ageIndex) ? "opt active" : "opt";
+    html += '<div class="' + cls + '" onclick="pickAge(' + i + ')"><b>' + ages[i].name + '</b><br><small>' + ages[i].weight + '</small></div>';
+  }
+  get("ages").innerHTML = html;
+}
+function showRibbons() {
+  var html = "";
+  for (var i = 0; i < ribbons.length; i++) {
+    var cls = (i == ribbonIndex) ? "opt active" : "opt";
+    html += '<div class="' + cls + '" style="border-bottom: 6px solid ' + ribbons[i].color + '" onclick="pickRibbon(' + i + ')">🎀<br>' + ribbons[i].name + '<br><small>FREE</small></div>';
+  }
+  get("ribbons").innerHTML = html;
+}
+
+function pickBox(i) { boxIndex = i; updateAll(); }
+function pickAge(i) { ageIndex = i; updateAll(); }
+function pickRibbon(i) { ribbonIndex = i; updateAll(); }
+function pickItem(i) {
+  var pos = selectedItems.indexOf(i);
+  if (pos == -1) selectedItems.push(i);   
+  else selectedItems.splice(pos, 1);      
+  updateAll();
+}
+
+function getTotal() {
+  var total = boxes[boxIndex].price;
+  for (var i = 0; i < selectedItems.length; i++) total += items[selectedItems[i]].price;
+  return total;
+}
+function row(left, right) {
+  return '<div class="row"><span>' + left + '</span><span>' + right + '</span></div>';
+}
+
+function updatePreview() {
+  var icons = "";
+  for (var i = 0; i < selectedItems.length; i++) icons += items[selectedItems[i]].icon + " ";
+  get("bigIcon").innerHTML = boxes[boxIndex].icon;
+  get("contents").innerHTML = icons || "(add some items!)";
+  get("ribbonBar").style.background = ribbons[ribbonIndex].color;
+  var wrapText = get("wrap").checked ? "Gift wrapped" : "No wrapping";
+  get("wrapNote").innerHTML = wrapText + " with " + ribbons[ribbonIndex].name + " satin ribbon";
+}
+
+function updatePrice() {
+  var age = ages[ageIndex].name;
+  var html = row(boxes[boxIndex].name, "₹" + boxes[boxIndex].price);
+  for (var i = 0; i < selectedItems.length; i++) {
+    var it = items[selectedItems[i]];
+    var label = it.sized ? it.name + " (" + age + ")" : it.name;
+    html += row(label, "₹" + it.price);
+  }
+  html += row("Gift wrapping", get("wrap").checked ? "FREE" : "-");
+  html += row("Satin ribbon (" + ribbons[ribbonIndex].name + ")", "FREE");
+  html += '<div class="row total"><span>Total</span><span>₹' + getTotal() + '</span></div>';
+  get("bill").innerHTML = html;
+}
+
+function updateCard() {
+  get("cardTo").innerText = "💌 " + (get("to").value || "Dear Parents") + ",";
+  get("cardMsg").innerText = get("msg").value || "Welcome to the world, little one! Sending you lots of love.";
+  get("cardFrom").innerText = "- " + (get("from").value || "Your loved ones");
+  get("giftCard").style.borderColor = ribbons[ribbonIndex].color;
+}
+
+function updateAll() {
+  showBoxes(); showItems(); showAges(); showRibbons();
+  get("sizeTip").innerHTML = "<b>" + ages[ageIndex].name + ":</b> baby weight " + ages[ageIndex].weight + ". " + ages[ageIndex].tip;
+  updatePreview(); updatePrice(); updateCard();
+}
+
+function copySummary() {
+  var names = [];
+  for (var i = 0; i < selectedItems.length; i++) names.push(items[selectedItems[i]].name);
+  var text = "Hamper: " + boxes[boxIndex].name + "\nItems: " + (names.join(", ") || "none yet");
+  text += "\nSize: " + ages[ageIndex].name + "\nRibbon: " + ribbons[ribbonIndex].name + "\nTotal: ₹" + getTotal();
+  navigator.clipboard.writeText(text);
+  alert("Summary copied! Share it so others pick different items.");
+}
+
+updateAll();
+</script>
+</body>
+</html>
